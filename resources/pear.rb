@@ -32,7 +32,7 @@ def current_installed_version(new_resource)
   version_check_cmd = "#{new_resource.binary} -d"
   version_check_cmd << " preferred_state=#{new_resource.preferred_state}"
   version_check_cmd << " list#{expand_channel(new_resource.channel)}"
-  p = shell_out(version_check_cmd)
+  p = shell_out(version_check_cmd, { default_env: false })
   response = nil
   response = grep_for_version(p.stdout, new_resource.package_name) if p.stdout =~ /\.?Installed packages/i
   response
@@ -132,7 +132,7 @@ action_class do
     candidate_version_cmd << "preferred_state=#{new_resource.preferred_state}"
     candidate_version_cmd << " search#{expand_channel(new_resource.channel)}"
     candidate_version_cmd << " #{new_resource.package_name}"
-    p = shell_out(candidate_version_cmd)
+    p = shell_out(candidate_version_cmd, { default_env: false })
     response = nil
     response = grep_for_version(p.stdout, new_resource.package_name) if p.stdout =~ /\.?Matched packages/i
     response
@@ -184,7 +184,7 @@ action_class do
   end
 
   def pear_shell_out(command)
-    p = shell_out!(command)
+    p = shell_out!(command, { default_env: false })
     # pear/pecl commands return a 0 on failures...we'll grep for it
     p.invalid! if p.stdout.split('\n').last =~ /^ERROR:.+/i
     p
@@ -206,7 +206,7 @@ action_class do
     @extension_dir ||= begin
                          # Consider using "pecl config-get ext_dir". It is more cross-platform.
                          # p = shell_out("php-config --extension-dir")
-                         p = shell_out("#{node['php']['pecl']} config-get ext_dir")
+                         p = shell_out("#{node['php']['pecl']} config-get ext_dir", { default_env: false })
                          p.stdout.strip
                        end
   end
@@ -221,7 +221,7 @@ action_class do
                     new_resource.binary
                   end
 
-    p = shell_out("#{list_binary} list-files #{name}")
+    p = shell_out("#{list_binary} list-files #{name}", { default_env: false })
     p.stdout.each_line.grep(/^src\s+.*\.so$/i).each do |line|
       files << line.split[1]
     end
@@ -237,13 +237,13 @@ action_class do
         search_args << " -d preferred_state=#{new_resource.preferred_state}"
         search_args << " search#{expand_channel(new_resource.channel)} #{new_resource.package_name}"
 
-        if grep_for_version(shell_out(new_resource.binary + search_args).stdout, new_resource.package_name)
+        if grep_for_version(shell_out(new_resource.binary + search_args, { default_env: false }).stdout, new_resource.package_name)
           if (new_resource.binary.include? 'pecl') || (new_resource.channel == 'pecl.php.net')
             true
           else
             false
           end
-        elsif grep_for_version(shell_out(node['php']['pecl'] + search_args).stdout, new_resource.package_name)
+        elsif grep_for_version(shell_out(node['php']['pecl'] + search_args, { default_env: false }).stdout, new_resource.package_name)
           true
         else
           raise "Package #{new_resource.package_name} not found in either PEAR or PECL."
